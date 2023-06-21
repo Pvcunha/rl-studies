@@ -28,10 +28,10 @@ for step in range(1000):
 
         new_state, reward, done, truncated, info = env.step(action)
 
-        qtable[curr_state][action] = qtable[curr_state][action] + alpha*reward + gamma*(np.max(qtable[new_state]) - qtable[curr_state][action]) 
+        qtable[curr_state][action] = qtable[curr_state][action] + alpha*(reward + gamma*(np.max(qtable[new_state]) - qtable[curr_state][action]))
         
         if reward > 0:
-            print('GANHOU PLAYBOY', step)
+            print('Chegou no objetivo', step)
         curr_state = new_state
         env.render()
 
