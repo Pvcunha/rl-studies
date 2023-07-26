@@ -9,3 +9,7 @@
 ### Implementations
 * [A discrete implementation with frozen lake](qlearning_frozenlake.py)
 
+### DQN  
+
+* [Pytorch DQN Tutorial](https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html)
+* [Deep Q Network w/pytorch](https://towardsdatascience.com/deep-q-network-with-pytorch-146bfa939dfe)
