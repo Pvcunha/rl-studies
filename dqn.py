@@ -59,9 +59,7 @@ class Agent:
         self.seed = random.seed(seed)
         self.batch_size = batch_size
         
-        self.target_net = Net(state_size, action_size).to(device)
-        self.policy_net = Net(state_size, action_size).to(device)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.net = Net(state_size, action_size).to(device)
         
         self.buffer = ReplayBuffer(10000)
 
@@ -70,7 +68,7 @@ class Agent:
         
         if np.random.random() > self.eps:
             state_as_tensor = torch.tensor([state], dtype=torch.float).to(self.qNet_local.device)
-            actions = self.policy_net.forward(state_as_tensor)
+            actions = self.net.forward(state_as_tensor)
             action = torch.argmax(actions).item()
         else:
             action = env.action_space.sample()
@@ -82,9 +80,8 @@ class Agent:
        if len(self.buffer) < self.batch_size:
            return
 
-       transitions = self.buffer.sample(self.batch_size)
-
-       b
+       s, a, r, n_s, d = self.buffer.sample(self.batch_size)
+       
        pass
     
 
@@ -102,9 +99,13 @@ for _ in range(1000):
 
     while not done:
         # choose action
-        action = 
+        action = agent.choose_action()
+        _state, reward, terminated, truncated, info = env.step(action)
+        _done = terminated or truncated
+        agent.buffer.push(state, action, reward, _state, _done)
+        agent.learn()
+
     action = env.action_space.sample()
-    state, reward, terminated, truncated, info = env.step(action)
 
     if terminated or truncated:
         observation, info = env.reset()
