@@ -13,3 +13,5 @@
 
 * [Pytorch DQN Tutorial](https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html)
 * [Deep Q Network w/pytorch](https://towardsdatascience.com/deep-q-network-with-pytorch-146bfa939dfe)
+* [Deep Q Network Single Net](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)  
+The original paper of dqn algorithm.

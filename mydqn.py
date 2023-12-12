@@ -1,7 +1,9 @@
+# paper reference: https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import math
 
 import gymnasium as gym
 
@@ -9,6 +11,9 @@ from collections import deque
 import random 
 
 device = "cuda" if torch.cuda.is_available() else "cpu" 
+EPS_START = 0.9
+EPS_END = 0.05
+EPS_DECAY = 1000
 
 class Net(nn.Module):
     def __init__(self, state_size, action_size):
@@ -46,28 +51,34 @@ class ReplayBuffer:
         sample_nextstate = random.sample(self.nextStateBuffer, batch_size)
         sample_done = random.sample(self.doneBuffer, batch_size)
 
-        return sample_state, sample_action, sample_reward, sample_nextstate, sample_done
+        return torch.Tensor(sample_state).to(device), torch.tensor(sample_action, dtype=torch.int64).to(device), torch.Tensor(sample_reward).to(device), torch.Tensor(sample_nextstate).to(device), torch.tensor(sample_done, dtype=torch.bool).to(device)
 
     def __len__(self):
         return len(self.stateBuffer) # tanto faz a deque todas vao estar populadas da mesma forma
 
 class Agent:
-    def __init__(self, state_size, action_size, batch_size=64, seed=42):
+    def __init__(self, state_size, action_size, batch_size=64, seed=42, buffer_size=10000):
         
         self.state_size = state_size 
         self.action_size = action_size
         self.seed = random.seed(seed)
         self.batch_size = batch_size
-        
+        self.buffer_size = buffer_size
+        self.gamma = 0.99
+        self.eps = 0.2
+
         self.net = Net(state_size, action_size).to(device)
+        self.optimizer = torch.optim.Adam(self.net.parameters())
+        self.steps_done = 0
         
-        self.buffer = ReplayBuffer(10000)
+        self.buffer = ReplayBuffer(self.buffer_size)
 
     
     def choose_action(self, env, state):
-        
-        if np.random.random() > self.eps:
-            state_as_tensor = torch.tensor([state], dtype=torch.float).to(self.qNet_local.device)
+        eps_threshold = EPS_END + (EPS_START - EPS_END) * \
+            math.exp(-1. * self.steps_done / EPS_DECAY)
+        if np.random.random() > eps_threshold:
+            state_as_tensor = torch.tensor([state], dtype=torch.float32).to(device)
             actions = self.net.forward(state_as_tensor)
             action = torch.argmax(actions).item()
         else:
@@ -77,38 +88,65 @@ class Agent:
 
    
     def learn(self):
-       if len(self.buffer) < self.batch_size:
-           return
 
-       s, a, r, n_s, d = self.buffer.sample(self.batch_size)
-       
-       pass
+        s, action_batch, r, n_s, d = self.buffer.sample(self.batch_size)
+        # terminal_states = [ss for ss, dd in zip(s, d) if dd == True ]
+        
+        next_q = self.net.forward(n_s)
+        # print(next_q.shape)
+        next_q = self.net.forward(n_s).max(1)
+        # print(next_q.values.shape)
+        next_q = next_q.values.unsqueeze(1)
+        # print(next_q.shape)
+
+        next_q[d] = 0 # max stonks
+
+        y = r.unsqueeze(1) + self.gamma*next_q 
+        
+        q_values = self.net(s)
+        # breakpoint()
+        q_values = q_values.gather(1, action_batch.unsqueeze(1))
+
+        loss = -F.mse_loss(q_values, y)
+        self.optimizer.zero_grad()
+        loss.backward()
+        
+        # torch.nn.utils.clip_grad_value_(self.net.parameters(), 100)
+        self.optimizer.step()
+
+        return loss
     
 
 env = gym.make("CartPole-v1", render_mode="human")
 
 action_size = env.action_space.n
-
 state, info = env.reset()
 state_size = len(state)
-done = False
 
 agent = Agent(state_size, action_size)
 
 for _ in range(1000):
-
+    state, info = env.reset()
+    done = False
+    
     while not done:
         # choose action
-        action = agent.choose_action()
+        action = agent.choose_action(env, state)
+
         _state, reward, terminated, truncated, info = env.step(action)
-        _done = terminated or truncated
-        agent.buffer.push(state, action, reward, _state, _done)
-        agent.learn()
+        done = terminated or truncated
+        agent.buffer.push(state, action, reward, _state, done)
+        if len(agent.buffer) >= agent.batch_size:
+            loss = agent.learn()
+            #print(loss.detach().cpu().item())
+        print(reward)
+        state = _state
+    
 
-    action = env.action_space.sample()
+    # action = env.action_space.sample()
 
-    if terminated or truncated:
-        observation, info = env.reset()
+    # if terminated or truncated:
+    #     observation, info = env.reset()
 
 
 env.close()
