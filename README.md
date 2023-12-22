@@ -15,3 +15,7 @@
 * [Deep Q Network w/pytorch](https://towardsdatascience.com/deep-q-network-with-pytorch-146bfa939dfe)
 * [Deep Q Network Single Net](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)  
 The original paper of dqn algorithm.
+* [Double Q network](https://arxiv.org/pdf/1509.06461.pdf)
+* [Smooth loss update](https://arxiv.org/pdf/1509.02971.pdf)
+
+### DDPG
